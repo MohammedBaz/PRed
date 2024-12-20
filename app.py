@@ -3,12 +3,43 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 import plotly.express as px
+import random
 
 # --- Data Generation Function (Enhanced with More Parameters) ---
 def generate_dummy_data(num_hospitals=5, num_months=36):
     np.random.seed(42)
     data = []
     cluster_id = 1  # Assuming all hospitals belong to one cluster for this demo
+    
+    # Define some common diseases associated with countries for simulation
+    country_disease_map = {
+        "China": ["COVID", "Avian Flu"],
+        "India": ["Dengue", "Malaria"],
+        "USA": ["Influenza", "Measles"],
+        "UK": ["Influenza", "Norovirus"],
+        "Brazil": ["Zika", "Dengue"],
+        "Nigeria": ["Malaria", "Yellow Fever"],
+        "Indonesia": ["Dengue", "Typhoid"],
+        "Pakistan": ["Polio", "Dengue"],
+        "Russia": ["Influenza", "Tuberculosis"],
+        "Japan": ["Influenza", "Norovirus"],
+        "Germany": ["Influenza", "Measles"],
+        "France": ["Influenza", "Norovirus"],
+        "Philippines": ["Dengue", "Tuberculosis"],
+        "Mexico": ["Influenza", "Dengue"],
+        "Egypt": ["Hepatitis", "Tuberculosis"],
+        "Vietnam": ["Dengue", "Measles"],
+        "Turkey": ["Influenza", "Hepatitis"],
+        "Iran": ["Influenza", "MERS"],
+        "Thailand": ["Dengue", "Influenza"],
+        "South Africa": ["Tuberculosis", "HIV"],
+        "Italy": ["Influenza", "Measles"],
+        "Canada": ["Influenza", "Norovirus"],
+        "Australia": ["Influenza", "Ross River virus"],
+        "Saudi Arabia": ["MERS", "Influenza"]  # Added Saudi Arabia to the list
+    }
+    
+    all_countries = list(country_disease_map.keys())
 
     for hospital_id in range(1, num_hospitals + 1):
         for month in range(1, num_months + 1):
@@ -17,7 +48,7 @@ def generate_dummy_data(num_hospitals=5, num_months=36):
             is_ramadan = 1 if month == 9 else 0
             is_hajj = 1 if month == 12 else 0
             is_summer = 1 if 6 <= month <= 8 else 0
-            is_winter = 1 if month in [1, 2, 12] else 0 # Define is_winter here
+            is_winter = 1 if month in [1, 2, 12] else 0 
             is_school_holiday = 1 if month in [7, 8, 12] else 0  # Example: July, August, December
 
             # Hospital Operational Factors
@@ -30,6 +61,14 @@ def generate_dummy_data(num_hospitals=5, num_months=36):
             er_visits = int(patient_volume * (0.2 + 0.05 * is_ramadan + 0.1 * is_hajj + 0.02 * is_summer + np.random.normal(0, 0.02)))
             avg_age_er = 40 + 10 * is_ramadan - 5 * is_hajj + np.random.normal(0, 5)
             percentage_saudi = 0.7 + 0.1 * is_ramadan - 0.2 * is_hajj + np.random.normal(0, 0.05)
+            
+            # Top 3 countries of origin for non-Saudi patients
+            if is_hajj:
+                # Simulate hajj season with specific countries
+                top_3_countries = ["Indonesia", "Pakistan", "India"]
+            else:
+                top_3_countries = random.sample(all_countries, 3)
+
             
             # Common Diseases (Simplified Example)
             flu_cases = int(patient_volume * (0.05 + 0.03 * is_winter - 0.02 * is_summer + np.random.normal(0, 0.01)))
@@ -62,13 +101,15 @@ def generate_dummy_data(num_hospitals=5, num_months=36):
                          num_doctors, num_nurses, bed_capacity, patient_volume, er_visits, avg_age_er,
                          percentage_saudi, flu_cases, gastro_cases, injury_cases, antibiotic_use_rate, iv_fluid_use,
                          ppe_use, num_clabsi_cases, central_line_days, clabsi_rate,
-                         hand_hygiene_compliance, cleaning_score, medication_stockout, equipment_failures, icu_patients, ventilator_days, bed_occupancy_rate, surgery_cases])
+                         hand_hygiene_compliance, cleaning_score, medication_stockout, equipment_failures, icu_patients, ventilator_days, bed_occupancy_rate, surgery_cases,
+                         top_3_countries[0], top_3_countries[1], top_3_countries[2]])
 
     columns = ["month", "hospital_id", "cluster_id", "avg_temp", "is_ramadan", "is_hajj", "is_summer", "is_school_holiday",
                "num_doctors", "num_nurses", "bed_capacity", "patient_volume", "er_visits", "avg_age_er",
                "percentage_saudi", "flu_cases", "gastro_cases", "injury_cases", "antibiotic_use_rate", "iv_fluid_use",
                "ppe_use", "num_clabsi_cases", "central_line_days", "clabsi_rate",
-               "hand_hygiene_compliance", "cleaning_score", "medication_stockout", "equipment_failures", "icu_patients", "ventilator_days", "bed_occupancy_rate", "surgery_cases"]
+               "hand_hygiene_compliance", "cleaning_score", "medication_stockout", "equipment_failures", "icu_patients", "ventilator_days", "bed_occupancy_rate", "surgery_cases",
+               "country_1", "country_2", "country_3"]
     df = pd.DataFrame(data, columns=columns)
     return df
 
@@ -142,25 +183,29 @@ X_future = sm.add_constant(X_future, has_constant='add')
 predictions = model.predict(X_future)
 prediction_df["predicted_clabsi_rate"] = predictions
 
-# --- Visualizations ---
-st.header("Simulation Results")
+# --- Visualize the Model Summary ---
+st.header("Model Summary for CLABSI Rate Prediction")
+st.text(model.summary())
 
-# CLABSI Rate Prediction
-st.markdown("### Predicted CLABSI Rate")
-fig_clabsi = px.line(prediction_df, x='month', y="predicted_clabsi_rate", color='hospital_id',
-                     title="Predicted CLABSI Rate for Next 12 Months",
-                     labels={"predicted_clabsi_rate": "Predicted CLABSI Rate (per 1000 central line days)"})
-st.plotly_chart(fig_clabsi)
+# --- Readiness Indicators ---
+st.header("Readiness Indicators")
 
-# --- Other Predictions & Visualizations (Examples) ---
+# 1. Equipment Needs Index
+# Example: Higher need during Hajj, higher need for ventilators if high ICU patients
+modified_df['equipment_needs_index'] = (modified_df['is_hajj'] * 0.5) + (modified_df['icu_patients'] / modified_df['icu_patients'].max())
 
-# Example: Predict ER Visits
-# ... (Build a model for ER visits using relevant parameters) ...
+# Normalize to 0-1 range
+modified_df['equipment_needs_index'] = (modified_df['equipment_needs_index'] - modified_df['equipment_needs_index'].min()) / (modified_df['equipment_needs_index'].max() - modified_df['equipment_needs_index'].min())
 
-# Example: Predict Medical Supply Needs
-# ... (Build models for antibiotic use, IV fluids, PPE, etc.) ...
+fig_equipment = px.line(modified_df, x='month', y='equipment_needs_index', color='hospital_id',
+                        title="Equipment Needs Index Over Time",
+                        labels={'equipment_needs_index': 'Equipment Needs Index'})
+st.plotly_chart(fig_equipment)
 
-# Example: Hospital Readiness Indicators
-# ... (Visualize hand hygiene compliance, cleaning scores, etc.) ...
+# 2. Medicine Needs Index
+# Example: Higher need for antibiotics if antibiotic use rate is high, higher need for flu medicine in winter
+modified_df['medicine_needs_index'] = (modified_df['antibiotic_use_rate'] / modified_df['antibiotic_use_rate'].max()) + \
+                                     (modified_df['is_winter'] * 0.3) + (modified_df['flu_cases'] / modified_df['flu_cases'].max())
 
-# Add more visualizations as needed based on the parameters and your prediction goals.
+# Normalize to 0-1 range
+modified_df['medicine_needs_index'] = (modified_df['medicine_needs_index'] - modified
