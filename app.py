@@ -17,6 +17,7 @@ def generate_dummy_data(num_hospitals=5, num_months=36):
             is_ramadan = 1 if month == 9 else 0
             is_hajj = 1 if month == 12 else 0
             is_summer = 1 if 6 <= month <= 8 else 0
+            is_winter = 1 if month in [1, 2, 12] else 0 # Define is_winter here
             is_school_holiday = 1 if month in [7, 8, 12] else 0  # Example: July, August, December
 
             # Hospital Operational Factors
