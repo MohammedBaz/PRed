@@ -27,17 +27,16 @@ patient_volume = st.sidebar.number_input("Expected Patient Volume", min_value=0,
 er_visits = st.sidebar.number_input("Expected ER Visits", min_value=0, value=100)
 percentage_saudi = st.sidebar.slider("Percentage of Saudi Patients (%)", 0, 100, 70)
 
-# Dropdowns for Top 3 Countries
-st.sidebar.subheader("Top 3 Countries of Patient Origin")
-country1 = st.sidebar.selectbox("Country 1", list(disease_mapping.keys()))
-country2 = st.sidebar.selectbox("Country 2", list(disease_mapping.keys()))
-country3 = st.sidebar.selectbox("Country 3", list(disease_mapping.keys()))
+# Multiselect for Countries
+selected_countries = st.sidebar.multiselect(
+    "Select Countries of Patient Origin",
+    list(disease_mapping.keys()),
+    default=["Country1", "Country2"]
+)
 
-# Selected Diseases
+# Get associated diseases
 selected_diseases = list(
-    set(disease_mapping.get(country1, []) +
-        disease_mapping.get(country2, []) +
-        disease_mapping.get(country3, []))
+    {disease for country in selected_countries for disease in disease_mapping.get(country, [])}
 )
 
 # Readiness Indicators Computation
@@ -61,13 +60,10 @@ def compute_readiness_indicators():
     staffing_score = (num_doctors + num_nurses) / (patient_volume + er_visits) * 100
 
     # Testing Capacity
-    testing_score = 0
-    if country1 in disease_mapping:
-        testing_score += 1.5
-    if country2 in disease_mapping:
-        testing_score += 1.0
-    if country3 in disease_mapping:
-        testing_score += 0.5
+    testing_score = sum(
+        1.5 if country == "Country1" else 1.0 if country == "Country2" else 0.5
+        for country in selected_countries
+    )
     testing_score += is_hajj * 2.0
 
     # Infection Control (CLABSI Rate)
