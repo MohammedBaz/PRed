@@ -4,6 +4,15 @@ import pandas as pd
 # Input Factors and Default Values
 st.title("Healthcare Readiness Simulation")
 
+# Disease Mapping for Countries
+disease_mapping = {
+    "Country1": ["Disease A", "Disease B"],
+    "Country2": ["Disease C", "Disease D"],
+    "Country3": ["Disease E", "Disease F"],
+    "Country4": ["Disease G", "Disease H"],
+    "Country5": ["Disease I", "Disease J"],
+}
+
 # Input Section
 st.sidebar.header("Input Factors")
 avg_temp = st.sidebar.slider("Average Temperature (°C)", 10, 50, 30)
@@ -17,13 +26,22 @@ num_nurses = st.sidebar.number_input("Number of Nurses", min_value=0, value=100)
 patient_volume = st.sidebar.number_input("Expected Patient Volume", min_value=0, value=500)
 er_visits = st.sidebar.number_input("Expected ER Visits", min_value=0, value=100)
 percentage_saudi = st.sidebar.slider("Percentage of Saudi Patients (%)", 0, 100, 70)
-top_3_countries = st.sidebar.text_area("Top 3 Countries of Patient Origin", "Country1, Country2, Country3")
+
+# Dropdowns for Top 3 Countries
+st.sidebar.subheader("Top 3 Countries of Patient Origin")
+country1 = st.sidebar.selectbox("Country 1", list(disease_mapping.keys()))
+country2 = st.sidebar.selectbox("Country 2", list(disease_mapping.keys()))
+country3 = st.sidebar.selectbox("Country 3", list(disease_mapping.keys()))
+
+# Selected Diseases
+selected_diseases = list(
+    set(disease_mapping.get(country1, []) +
+        disease_mapping.get(country2, []) +
+        disease_mapping.get(country3, []))
+)
 
 # Readiness Indicators Computation
 def compute_readiness_indicators():
-    # Parse top 3 countries
-    countries = [c.strip() for c in top_3_countries.split(",")]
-
     # Equipment Needs
     equipment_score = (
         (avg_temp > 35) * 1.5 +  # High temperature increases equipment needs
@@ -44,11 +62,12 @@ def compute_readiness_indicators():
 
     # Testing Capacity
     testing_score = 0
-    for country in countries:
-        if country == "Country1":
-            testing_score += 1.5
-        elif country == "Country2":
-            testing_score += 1.0
+    if country1 in disease_mapping:
+        testing_score += 1.5
+    if country2 in disease_mapping:
+        testing_score += 1.0
+    if country3 in disease_mapping:
+        testing_score += 0.5
     testing_score += is_hajj * 2.0
 
     # Infection Control (CLABSI Rate)
@@ -80,6 +99,13 @@ indicators = compute_readiness_indicators()
 # Display Results
 st.subheader("Readiness Indicators")
 st.write(pd.DataFrame(indicators, index=["Value"]).T)
+
+# Display Associated Diseases
+st.subheader("Associated Diseases from Selected Countries")
+if selected_diseases:
+    st.write(", ".join(selected_diseases))
+else:
+    st.write("No diseases found for the selected countries.")
 
 # Visualization (Bar Chart)
 st.bar_chart(pd.DataFrame({k: v for k, v in indicators.items() if isinstance(v, (int, float))}, index=["Value"]).T)
