@@ -43,11 +43,13 @@ def compute_readiness_indicators():
     staffing_score = (num_doctors + num_nurses) / (patient_volume + er_visits) * 100
 
     # Testing Capacity
-    testing_score = sum([
-        1.5 if country == "Country1" else 0,
-        1.0 if country == "Country2" else 0,
-        is_hajj * 2.0
-    ] for country in countries)
+    testing_score = 0
+    for country in countries:
+        if country == "Country1":
+            testing_score += 1.5
+        elif country == "Country2":
+            testing_score += 1.0
+    testing_score += is_hajj * 2.0
 
     # Infection Control (CLABSI Rate)
     clabsi_rate = (
