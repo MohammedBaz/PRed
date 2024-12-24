@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # Input Factors and Default Values
-st.title("Healthcare Readiness Simulation")
+st.title("Healthcare Readiness Simulation and Prediction")
 
 # Disease Mapping for Countries
 disease_mapping = {
